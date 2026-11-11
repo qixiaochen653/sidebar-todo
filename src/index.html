@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>边栏待办</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app" class="right compact">
+  <nav class="strip" id="strip" aria-label="页签"></nav>
+  <aside class="panel" id="panel" aria-label="待办面板">
+    <header class="head">
+      <div class="hl">
+        <div class="ring" id="ring"></div>
+        <div><div class="date" id="date"></div><div class="sub" id="subline"></div></div>
+      </div>
+      <div class="tools">
+        <button class="icon" data-screen id="screenBtn" hidden aria-label="换到另一块屏幕" title="换到另一块屏幕"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
+        <button class="icon" data-cal id="calBtn" aria-label="打开日历" title="打开日历（周 / 月视图）"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+        <button class="icon" data-wide id="wideBtn"></button>
+        <button class="icon" data-swap id="swapBtn" aria-label="切换到另一侧贴边" title="换到另一边"></button>
+        <button class="icon" data-close id="closeBtn" aria-label="收起面板"></button>
+      </div>
+    </header>
+    <section class="card">
+      <div id="course" style="min-width:0;flex:1"></div>
+      <button class="focus" data-focus id="focusBtn"></button>
+      <div class="bar" id="fb"></div>
+    </section>
+    <div class="upd" id="upd" hidden></div>
+    <div class="body" id="body"></div>
+    <footer class="foot">
+      <span id="toast" class="toast" role="status"></span><button class="set-btn" data-settings id="setBtn" title="备份、导入导出、不透明度"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>数据与外观</button>
+      <span class="foot-r"><button data-clear-done id="clearDone" hidden></button><i>·</i><span id="sideLabel"></span><i class="tauri-only">·</i><button class="tauri-only" data-quit>退出</button></span>
+    </footer>
+  </aside>
+</div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+<script src="shared.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

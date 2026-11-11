@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>便签</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="note.css">
+</head>
+<body class="note-win">
+<header class="nw-head" data-tauri-drag-region>
+  <span class="nw-grip" data-tauri-drag-region aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1-1.5z"/><path d="M9 12h6M9 15.5h4"/></svg></span>
+  <input id="title" placeholder="便签标题" aria-label="便签标题" autocomplete="off">
+  <button class="nw-btn" id="pin" aria-label="窗口置顶" title="置顶"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3z"/><path d="M12 14v6"/></svg></button>
+  <button class="nw-btn" id="close" aria-label="收起这张便签（内容不会删）" title="收起（内容还在便签库里）"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</header>
+<textarea id="body" placeholder="写点什么…" aria-label="便签内容"></textarea>
+<footer class="nw-foot" data-tauri-drag-region><span id="count" data-tauri-drag-region></span><span id="when" data-tauri-drag-region></span></footer>
+<script src="shared.js"></script>
+<script src="note.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+/* 桌面便签小窗口 */
+body.note-win{display:flex;flex-direction:column;height:100vh;background:var(--glass);overflow:hidden;border:1px solid var(--border);border-radius:0}
+@media (prefers-color-scheme: light){body.note-win{background:#FBF8EF}}
+.nw-head{display:flex;align-items:center;gap:4px;padding:6px 6px 6px 10px;border-bottom:1px solid var(--line);cursor:default}
+.nw-grip{display:flex;color:var(--accent);padding:2px}
+.nw-head input{flex:1;min-width:0;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:7px;padding:4px 6px;outline:none}
+.nw-head input:focus{border-color:var(--accent);background:var(--field)}
+.nw-btn{flex:none;width:28px;height:28px;border:0;border-radius:8px;background:transparent;color:var(--ink3);display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.nw-btn:hover{background:var(--soft-hover);color:var(--ink)}
+#pin.on{color:var(--accent);background:var(--accent-soft)}
+#close:hover{color:#C2410C;background:rgba(234,88,12,.10)}
+body.note-win textarea{flex:1;height:auto;padding:10px 14px 4px;font-size:14px;background-position:0 10px}
+.nw-foot{display:flex;justify-content:space-between;padding:5px 12px 7px;font-size:11px;color:var(--ink3)}

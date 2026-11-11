@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日历 · 边栏待办</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="calendar.css">
+</head>
+<body class="cal-win">
+<header class="cbar">
+  <div class="cbar-l">
+    <button class="cbtn ic" data-nav="-1" aria-label="上一页"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <h1 id="range"></h1>
+    <button class="cbtn ic" data-nav="1" aria-label="下一页"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button class="cbtn" data-today>今天</button>
+    <button class="stat" data-drawer="plan" id="statPlan"></button>
+    <button class="stat" data-drawer="late" id="statLate"></button>
+  </div>
+  <div class="cbar-r">
+    <span class="seg2" role="group" aria-label="视图"><button data-view="week">周视图</button><button data-view="month">月视图</button></span>
+    <div class="fwrap">
+      <button class="cbtn" data-filter aria-haspopup="true" id="filterBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"/></svg>筛选</button>
+      <div class="fmenu" id="fmenu" hidden>
+        <label><input type="checkbox" data-f="showDone">显示已完成</label>
+        <label><input type="checkbox" data-f="imp">只看「重要」</label>
+        <label><input type="checkbox" data-f="urg">只看「紧急」</label>
+        <label><input type="checkbox" data-f="lunar">显示农历和节气</label>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="cmain">
+  <aside class="drawer" id="drawer" hidden></aside>
+  <section class="grid" id="grid"></section>
+</div>
+<div class="pop" id="pop" hidden></div>
+<div class="toast cal-toast" id="toast" role="status"></div>
+<script src="shared.js"></script>
+<script src="lunar.js"></script>
+<script src="calendar.js"></script>
+</body>
+</html>
