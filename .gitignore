@@ -1,0 +1,11 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+
+# 本地数据导出
+sidebar-todo-data-*.json
+启用git版本管理.bat
+sidebar-todo-history.bundle
+# 更新签名私钥绝对不能上传
+*.key
+updater-key/
