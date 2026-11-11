@@ -14,9 +14,9 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: lts/*
 
@@ -39,4 +39,7 @@ jobs:
           releaseBody: '下载下面的 .exe 安装包，双击安装。已经装过的会自动提示更新。'
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
+          # 安装包用英文文件名：GitHub 会把中文文件名删掉，导致更新文件 latest.json 生成失败
+          releaseAssetNamePattern: 'sidebar-todo_[version]_[arch][setup][ext]'
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
