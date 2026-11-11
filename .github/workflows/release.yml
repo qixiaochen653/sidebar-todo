@@ -1,0 +1,42 @@
+# 发布新版本：在 GitHub 的 Actions 页面选「发布新版本」→ Run workflow。
+# GitHub 会在云端的 Windows 上打包，签名后发到 Releases；已安装的软件会自动收到更新。
+name: 发布新版本
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        with:
+          tagName: v__VERSION__
+          releaseName: '边栏待办 v__VERSION__'
+          releaseBody: '下载下面的 .exe 安装包，双击安装。已经装过的会自动提示更新。'
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
