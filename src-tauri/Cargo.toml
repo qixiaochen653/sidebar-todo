@@ -20,6 +20,8 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+# tauri.conf.json 里有 plugins 配置时，generate_context! 需要它
+serde_json = "1"
 
 [profile.release]
 # 让安装包更小
