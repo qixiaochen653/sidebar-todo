@@ -32,13 +32,24 @@ function visible(t) {
   if (c.urg && !t.urg) return false;
   return true;
 }
+// 和边栏的「今天」保持一致：今天这一格里，除了今天截止的，还放没做完的逾期待办和没定日期的待办
+const carried = (t, iso) => !t.done && (!t.due || t.due < iso);
 function tasksOn(iso) {
-  return S.tasks.filter(t => t.due === iso && visible(t))
-    .sort((a, b) => (a.done - b.done) || ((a.remind || '99') < (b.remind || '99') ? -1 : (a.remind || '99') > (b.remind || '99') ? 1 : 0) || (b.imp - a.imp) || (a.id - b.id));
+  const tIso = todayIso();
+  const sortKey = t => !t.due ? 2 : t.due < tIso && !t.done ? 0 : 1;   // 逾期 → 今天 → 未定日期
+  return S.tasks.filter(t => visible(t) && (iso === tIso ? (t.due === iso || carried(t, iso)) : (t.due === iso && !(iso < tIso && !t.done))))
+    .sort((a, b) => (a.done - b.done) || (sortKey(a) - sortKey(b)) || ((a.remind || '99') < (b.remind || '99') ? -1 : (a.remind || '99') > (b.remind || '99') ? 1 : 0) || (b.imp - a.imp) || (a.id - b.id));
 }
+// 逾期 / 未定日期的小标记
+const tag = (t, short) => {
+  if (t.done) return '';
+  if (!t.due) return `<span class="tg" title="还没定日期">${short ? '未' : '未定'}</span>`;
+  const d = daysLeft(t.due);
+  return d < 0 ? `<span class="tg late" title="逾期 ${-d} 天">${short ? '逾' : '逾期' + (-d) + '天'}</span>` : '';
+};
 const evHtml = (t, showTime = true) => `<div class="ev ${t.done ? 'done' : ''} ${popTask === t.id ? 'sel' : ''}" draggable="true" data-ev="${t.id}" title="${esc(t.title)}${t.remind ? '  ' + t.remind : ''}">
   <button class="ck" data-ck="${t.id}" aria-label="${t.done ? '恢复' : '完成'}：${esc(t.title)}">${t.done ? I.check : ''}</button>
-  <span class="dt" style="--c:${color(t)}"></span><span class="tt">${esc(t.title)}</span>${t.repeat ? '<span class="rp" title="' + REPEAT[t.repeat] + '重复">↻</span>' : ''}${showTime && t.remind ? `<span class="tm">${esc(t.remind)}</span>` : ''}</div>`;
+  <span class="dt" style="--c:${color(t)}"></span><span class="tt">${esc(t.title)}</span>${tag(t, !showTime)}${t.repeat ? '<span class="rp" title="' + REPEAT[t.repeat] + '重复">↻</span>' : ''}${showTime && t.remind ? `<span class="tm">${esc(t.remind)}</span>` : ''}</div>`;
 function dayHead(d) {
   const iso = isoOf(d), L = C().lunar && window.Lunar ? Lunar.label(d.getFullYear(), d.getMonth() + 1, d.getDate()) : null;
   return `<div class="dhead"><span class="dnum">${d.getDate()}</span>${L ? `<span class="lun ${L.fest ? 'fest' : L.term ? 'term' : ''}">${esc(L.text)}</span>` : ''}<button class="dadd" data-qadd="${iso}" aria-label="在 ${d.getMonth() + 1}月${d.getDate()}日 添加待办">${I.plus}</button></div>`;
@@ -73,11 +84,11 @@ function render() {
     const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1), start = mondayOf(first);
     $('range').textContent = `${first.getFullYear()} 年 ${first.getMonth() + 1} 月`;
     // 每个格子最多显示几条：按窗口高度估算
-    const rowH = Math.max(60, (window.innerHeight - 110) / 6), cap = Math.max(1, Math.floor((rowH - 30) / 22));
+    const rowH = Math.max(60, (window.innerHeight - 100) / 6), room = rowH - 30, fitAll = Math.max(1, Math.floor(room / 20)), fitMore = Math.max(1, Math.floor((room - 16) / 20));
     h = `<div class="wk-head">${WEEK.map(w => `<div>${w}</div>`).join('')}</div><div class="mo-body">`;
     for (let i = 0; i < 42; i++) {
       const d = addDays(start, i), iso = isoOf(d), list = tasksOn(iso);
-      const shown = quickDay === iso ? list.slice(0, Math.max(0, cap - 1)) : list.length > cap ? list.slice(0, cap - 1) : list;
+      const shown = quickDay === iso ? list.slice(0, Math.max(0, fitMore - 1)) : list.length > fitAll ? list.slice(0, fitMore) : list;
       const rest = list.length - shown.length;
       h += `<div class="cell ${d.getMonth() !== first.getMonth() ? 'other' : ''} ${iso === tIso ? 'today' : ''}" data-day="${iso}">${dayHead(d)}<div class="dlist">${quickInput(iso)}${shown.map(t => evHtml(t, false)).join('')}${rest > 0 ? `<button class="more-ev" data-week="${iso}">还有 ${rest} 件 →</button>` : ''}</div></div>`;
     }
