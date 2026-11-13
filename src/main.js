@@ -188,17 +188,22 @@ function render() {
   renderFocus();
   renderCourse();
 
+  const dt = (kind, label, dv, tv) => `<div class="ed-row">
+        <span class="ed-lab">${label}</span>
+        <label class="ed-date"><input type="date" data-ed-${kind} value="${dv || ''}" aria-label="${label}日期"></label>
+        <label class="ed-date ed-tm"><input type="time" data-ed-${kind}-time value="${tv || ''}" aria-label="${label}时间"></label>
+        ${dv || tv ? `<button class="ed-clear" data-ed-clear="${kind}" aria-label="清除${label}">${ICON.x}</button>` : ''}
+      </div>`;
   const editor = t => `<div class="editor" data-editor="${t.id}">
       <input class="ed-title" data-ed-title value="${esc(t.title)}" placeholder="待办内容" aria-label="待办内容">
-      <div class="ed-row">
-        <label class="ed-date"><span>截止</span><input type="date" data-ed-due value="${t.due || ''}" aria-label="截止日期"></label>
-        ${t.due ? '<button class="ed-clear" data-ed-nodue aria-label="清除截止日">' + ICON.x + '</button>' : ''}
-        <span class="ed-quick">${[['今天', 0], ['明天', 1], ['下周', 7]].map(([n, k]) => `<button data-ed-quick="${k}">${n}</button>`).join('')}</span>
-      </div>
+      ${dt('start', '开始', t.start, t.startTime)}
+      ${dt('due', '截止', t.due, t.dueTime)}
+      <div class="ed-row"><span class="ed-lab"></span><span class="ed-quick left">${[['今天', 0], ['明天', 1], ['下周', 7]].map(([n, k]) => `<button data-ed-quick="${k}">截止${n}</button>`).join('')}</span></div>
       <div class="ed-row">
         <span class="ed-lab">重复</span>
         <span class="seg2 ed-rep">${[['', '不重复'], ...Object.entries(REPEAT)].map(([k, n]) => `<button data-ed-repeat="${k}" class="${(t.repeat || '') === k ? 'on' : ''}">${n}</button>`).join('')}</span>
       </div>
+      ${t.repeat === 'weekdays' ? `<div class="ed-row"><span class="ed-lab"></span><span class="wdays">${[1, 2, 3, 4, 5, 6, 0].map(d => `<button data-ed-wd="${d}" class="${(t.repeatDays || []).includes(d) ? 'on' : ''}" aria-pressed="${(t.repeatDays || []).includes(d)}">${WD[d]}</button>`).join('')}</span></div>` : ''}
       <div class="ed-row">
         <span class="ed-lab">标记</span>
         <button class="pill ${t.imp ? 'on' : ''}" data-ed-imp aria-pressed="${t.imp}">重要</button>
@@ -215,12 +220,17 @@ function render() {
 
   const item = t => {
     if (editing === t.id) return editor(t);
-    const dd = due(t.due); const sd = t.subs.filter(s => s.done).length;
+    let dd = due(t.due); const sd = t.subs.filter(s => s.done).length;
+    // 已经开始、还没到截止日：显示「进行中」
+    if (dd && t.start && daysLeft(t.start) <= 0 && daysLeft(t.due) > 0) dd = ['d2', `进行中 · ${daysLeft(t.due) === 1 ? '明天' : daysLeft(t.due) + ' 天后'}截止`];
+    const ds = t.start ? daysLeft(t.start) : null;
+    const startChip = ds !== null && ds > 0 ? `<span class="chip d3">${ds === 1 ? '明天开始' : ds + ' 天后开始'}${t.startTime ? ' ' + esc(t.startTime) : ''}</span>` : '';
+    const timeChip = t.dueTime && (!dd || daysLeft(t.due) <= 1) ? `<span class="rem">${ICON.clock}${esc(t.dueTime)}</span>` : '';
     return `<div class="item">
       <button class="chk" data-toggle="${t.id}" aria-label="完成：${esc(t.title)}"></button>
       <div style="flex:1;min-width:0">
         <div class="title editable" data-edit="${t.id}" title="点一下编辑">${esc(t.title)}<span class="pen">${ICON.edit}</span></div>
-        <div class="meta">${dd ? `<span class="chip ${dd[0]}">${dd[1]}</span>` : ''}${t.imp ? '<span class="imp">重要</span>' : ''}${t.urg ? '<span class="urg">紧急</span>' : ''}${t.remind ? `<span class="rem">${ICON.bell}${esc(t.remind)}</span>` : ''}${t.repeat ? `<span class="rem">${ICON.repeat}${REPEAT[t.repeat]}</span>` : ''}${t.subs.length ? `<span class="cnt">子任务 ${sd}/${t.subs.length}</span>` : ''}</div>
+        <div class="meta">${startChip}${dd ? `<span class="chip ${dd[0]}">${dd[1]}</span>` : ''}${timeChip}${t.imp ? '<span class="imp">重要</span>' : ''}${t.urg ? '<span class="urg">紧急</span>' : ''}${t.remind ? `<span class="rem">${ICON.bell}${esc(t.remind)}</span>` : ''}${t.repeat ? `<span class="rem">${ICON.repeat}${esc(repeatLabel(t))}</span>` : ''}${t.subs.length ? `<span class="cnt">子任务 ${sd}/${t.subs.length}</span>` : ''}</div>
         ${t.subs.length ? `<div class="subs">${t.subs.map((s, i) => `<button data-sub="${t.id}:${i}"><span class="box ${s.done ? 'on' : ''}">${s.done ? ICON.mini : ''}</span><span class="${s.done ? 'struck' : ''}">${esc(s.t)}</span></button>`).join('')}</div>` : ''}
       </div></div>`;
   };
@@ -229,7 +239,7 @@ function render() {
   if (settingsOpen) body = renderSettings();
   else if (S.tab === 'today') {
     const scopeAll = S.scope === 'all';
-    const isToday = t => { const d = daysLeft(t.due); return d === null || d <= 0; };
+    const isToday = isTodayTask;
     const later = open.filter(t => !isToday(t)).length;
     const list = scopeAll ? open : open.filter(isToday);
     body = `<div class="add"><label class="sr" for="nt">新待办</label><input id="nt" placeholder="想到什么，先记下来…" autocomplete="off"><button data-add aria-label="添加待办">${ICON.plus}</button></div>
@@ -373,13 +383,13 @@ function renderNotes() {
   return h;
 }
 function newNote() {
-  const n = { id: S.nextNoteId++, title: '', body: '', group: noteQuery ? null : noteGroup, win: false, top: true, updated: Date.now() };
+  const n = { id: uid(), title: '', body: '', group: noteQuery ? null : noteGroup, win: false, top: true, updated: Date.now() };
   S.notes.push(n); noteEdit = n.id; save(); render();
   const t = document.querySelector('[data-n-title]'); if (t) t.focus();
 }
 function newGroup() {
   let k = 1; while (S.groups.some(g => g.name === '新分组' + (k > 1 ? ' ' + k : ''))) k++;
-  const g = { id: S.nextGroupId++, name: '新分组' + (k > 1 ? ' ' + k : '') };
+  const g = { id: uid(), name: '新分组' + (k > 1 ? ' ' + k : '') };
   S.groups.push(g); noteGroup = g.id; noteQuery = ''; noteSel.clear(); save(); render();
   const i = document.querySelector('[data-n-gname]'); if (i) { i.focus(); i.select(); }
 }
@@ -450,7 +460,7 @@ function renderCourse() {
 
 function addTask() {
   const nt = $('nt'); const v = nt.value.trim(); if (!v) return;
-  S.tasks.push({ id: S.nextId++, title: v, due: null, imp: false, urg: false, done: false, subs: [] });
+  S.tasks.push({ id: uid(), title: v, due: isoIn(0), created: isoIn(0), imp: false, urg: false, done: false, subs: [] });   // 随手记的默认就是今天
   save(); render(); $('nt').focus();
 }
 
@@ -475,11 +485,26 @@ document.addEventListener('click', async e => {
   const d = b.dataset;
   const t = curTask();
   if ('edImp' in d) { t.imp = !t.imp; save(); render(); return; }
-  if (d.edRepeat !== undefined) { t.repeat = d.edRepeat || null; if (t.repeat && !t.due) t.due = isoIn(0); save(); render(); return; }
+  if (d.edRepeat !== undefined) {
+    t.repeat = d.edRepeat || null; if (t.repeat && !t.due) t.due = isoIn(0);
+    if (t.repeat === 'weekdays' && !(t.repeatDays && t.repeatDays.length)) t.repeatDays = [parseIso(t.due).getDay()];
+    if (t.repeat !== 'weekdays') delete t.repeatDays;
+    save(); render(); return;
+  }
+  if (d.edWd !== undefined) {
+    const n = +d.edWd, set = new Set(t.repeatDays || []);
+    if (set.has(n)) { if (set.size > 1) set.delete(n); } else set.add(n);   // 至少留一天
+    t.repeatDays = [...set]; save(); render(); return;
+  }
+  if (d.edClear) {
+    if (d.edClear === 'start') { t.start = null; t.startTime = null; }
+    else { t.due = null; t.dueTime = null; t.remind = null; t.notified = null; }
+    save(); render(); return;
+  }
   if ('edUrg' in d) { t.urg = !t.urg; save(); render(); return; }
   if ('edNodue' in d) { t.due = null; t.remind = null; t.notified = null; save(); render(); return; }
   if ('edNoremind' in d) { t.remind = null; t.notified = null; save(); render(); return; }
-  if (d.edQuick !== undefined) { t.due = isoIn(+d.edQuick); t.notified = null; save(); render(); return; }
+  if (d.edQuick !== undefined) { t.due = isoIn(+d.edQuick); if (t.start && t.start > t.due) t.start = t.due; t.notified = null; save(); render(); return; }
   if (d.edSubdel !== undefined) { t.subs.splice(+d.edSubdel, 1); save(); render(); return focusEditor('[data-ed-subnew]'); }
   if ('edDel' in d) return removeTasks([t], `已删除「${t.title}」`);
   if ('edOk' in d) return closeEditor();
@@ -561,7 +586,15 @@ document.addEventListener('input', e => {
 document.addEventListener('compositionend', e => { if ('nQ' in e.target.dataset) { noteQuery = e.target.value; nqFocus = true; render(); } });
 document.addEventListener('change', e => {
   const t = curTask();
-  if ('edDue' in e.target.dataset && t) { t.due = e.target.value || null; t.notified = null; save(); render(); }
+  const ed = e.target.dataset;
+  if (t && ('edDue' in ed || 'edStart' in ed || 'edDueTime' in ed || 'edStartTime' in ed)) {
+    const v = e.target.value || null;
+    if ('edDue' in ed) { t.due = v; if (v && t.start && t.start > v) t.start = v; }
+    if ('edStart' in ed) { t.start = v; if (v && (!t.due || t.due < v)) t.due = v; }
+    if ('edDueTime' in ed) { t.dueTime = v; if (v && !t.due) t.due = isoIn(0); }
+    if ('edStartTime' in ed) { t.startTime = v; if (v && !t.start) t.start = t.due || isoIn(0); }
+    t.notified = null; save(); render();
+  }
   const nd = e.target.dataset;
   if ('nGroup' in nd) { const n = curNote(); if (n) { n.group = nd && e.target.value ? +e.target.value : null; save(); } }
   if ('nMove' in nd && e.target.value) {
@@ -619,25 +652,37 @@ if (win) {
 
 /* ───────────── 透明的地方让鼠标穿过去 ───────────── */
 // 展开时窗口比面板大（上下留白、阴影、页签旁边的空位），这些透明区域本来会挡住下面软件的点击。
-// 每 60ms 看一眼鼠标在哪：不在面板 / 页签上，就让窗口暂时“忽略鼠标”，点击直接落到下面的软件。
-let ignoring = false;
+// 鼠标在面板上时：用网页自己的 mousemove 判断（不耗资源）；一离开面板就让窗口「忽略鼠标」，
+// 之后才需要定时问系统鼠标在哪 —— 离窗口远时问得慢（0.3 秒），靠近时问得快（0.08 秒）。
+let ignoring = false, pollTimer = null;
 async function setIgnore(v) {
   if (v === ignoring) return;
   ignoring = v;
   try { await win.setIgnoreCursorEvents(v); } catch (e) { ignoring = false; }
+  if (v) schedulePoll(80); else stopPoll();
 }
 function overUI(x, y) {
   const els = [$('panel'), ...document.querySelectorAll('.strip .tab:not([hidden])')];
   return els.some(el => { const r = el.getBoundingClientRect(); return r.width && x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 2 && y <= r.bottom + 2; });
 }
+const passThroughOn = () => win && mode === 'full' && !busy && !drag && winGeo && S.open;
+function stopPoll() { clearTimeout(pollTimer); pollTimer = null; }
+function schedulePoll(ms) { stopPoll(); pollTimer = setTimeout(pollCursor, ms); }
 async function pollCursor() {
-  if (!win || mode !== 'full' || busy || drag || !winGeo || !S.open) return setIgnore(false);
+  pollTimer = null;
+  if (!passThroughOn()) return setIgnore(false);
   try {
     const c = await TAURI.window.cursorPosition();
-    await setIgnore(!overUI((c.x - winGeo.x) / winGeo.s, (c.y - winGeo.y) / winGeo.s));
+    const x = (c.x - winGeo.x) / winGeo.s, y = (c.y - winGeo.y) / winGeo.s;
+    if (overUI(x, y)) return setIgnore(false);
+    const far = x < -60 || x > innerWidth + 60 || y < -60 || y > innerHeight + 60;
+    if (ignoring) schedulePoll(far ? 300 : 80);
   } catch (e) { setIgnore(false); }
 }
-if (win && TAURI.window.cursorPosition) setInterval(pollCursor, 60);
+if (win && TAURI.window.cursorPosition) {
+  document.addEventListener('mousemove', e => { if (passThroughOn() && !ignoring && !overUI(e.clientX, e.clientY)) setIgnore(true); }, { passive: true });
+  document.addEventListener('mouseleave', () => { if (passThroughOn() && !ignoring) setIgnore(true); });
+}
 
 /* ───────────── 放大面板 ───────────── */
 async function toggleWide() {
@@ -723,15 +768,20 @@ async function checkUpdate(manual) {
   const U = TAURI && TAURI.updater; if (!U) return manual && toastInfo('浏览器预览里没法检查更新');
   try {
     const u = await U.check();
-    if (u) { update = u; renderUpdate(); if (manual && !S.open) setOpen(true); }
+    if (u) {
+      update = u; renderUpdate(); if (manual && !S.open) setOpen(true);
+      // 面板收起时也要看得到：页签上亮小红点；每个新版本弹一次系统通知
+      if (!manual && S.updNotified !== u.version) { S.updNotified = u.version; save(); notify('边栏待办有新版本 ' + u.version, '点开边栏面板，在顶部点「更新」就能升级。'); }
+    }
     else if (manual) { if (!S.open) await setOpen(true); toastInfo('已经是最新版本 ' + (await TAURI.app.getVersion())); }
   } catch (e) { console.warn('检查更新失败', e); if (manual) { if (!S.open) await setOpen(true); toastInfo('检查更新失败：可能是网络连不上 GitHub'); } }
 }
 function renderUpdate(msg) {
   const el = $('upd');
+  $('app').classList.toggle('has-upd', !!update && !updating);
   if (!update) { el.hidden = true; return; }
   el.hidden = false;
-  const notes = (update.body || '').trim().split('\n').filter(Boolean).slice(0, 3).map(esc).join('<br>');
+  const notes = (update.body || '').trim().split('\n').filter(l => l.trim() && !/\.exe|安装包/.test(l)).slice(0, 3).map(esc).join('<br>');
   el.innerHTML = msg ? `<span>${msg}</span>` : `<div><b>有新版本 ${esc(update.version)}</b>${notes ? `<small>${notes}</small>` : ''}</div>
     <span class="upd-acts"><button class="n-link" data-upd-later>以后</button><button class="ed-ok sm" data-upd-go>更新</button></span>`;
 }
