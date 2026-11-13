@@ -1,12 +1,13 @@
 {
   "name": "sidebar-todo",
   "private": true,
-  "version": "0.7.2",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
-    "build": "tauri build"
+    "build": "tauri build",
+    "test": "node tests/quickadd.test.cjs && node tests/ui.test.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
