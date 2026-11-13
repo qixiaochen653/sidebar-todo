@@ -1,6 +1,6 @@
 # 边栏待办 · 给 Claude Code 的说明
 
-Windows 贴边待办 + 便签（Tauri 2，前端纯 JS，withGlobalTauri）。当前代码版本 0.8.0（尚未发布；线上是 0.7.2）。
+Windows 贴边待办 + 便签（Tauri 2，前端纯 JS，withGlobalTauri）。当前代码版本见 package.json；线上版本看 GitHub Releases。
 
 ## 常用命令
 - `npm test`：一句话识别测试 + 界面测试（界面测试需先 `npm install --no-save playwright && npx playwright install chromium`）

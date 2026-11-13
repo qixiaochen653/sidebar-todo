@@ -136,6 +136,7 @@ async function doSetOpen(open, my) {
     } else app.classList.remove('compact');
     render();                                   // 加上 .open，CSS 负责滑进来
     if (win) setFocusable(true);
+    if (win) maybeCheckUpdate();
   } else {
     S.open = false; save();
     render();                                   // 去掉 .open，CSS 负责滑出去
@@ -844,7 +845,18 @@ document.addEventListener('click', e => {
   if (e.target.closest('[data-upd-go]')) installUpdate();
   else if (e.target.closest('[data-upd-later]')) { update = null; renderUpdate(); }
 });
-if (win) { setTimeout(() => checkUpdate(false), 8000); setInterval(() => checkUpdate(false), 6 * 3600e3); }
+// 自动检查：启动后 8 秒一次；之后每小时一次；展开面板、电脑从睡眠醒来时也查（距上次不到 1 小时就跳过）
+var lastUpdCheck = 0; // 用 var：面板在启动时就可能展开，那时这一行还没执行到
+function maybeCheckUpdate() { if (Date.now() - lastUpdCheck < 3600e3) return; lastUpdCheck = Date.now(); checkUpdate(false); }
+if (win) {
+  setTimeout(maybeCheckUpdate, 8000);
+  let tick = Date.now();
+  setInterval(() => {
+    const now = Date.now(), slept = now - tick > 5 * 60e3; tick = now; // 一分钟的计时器隔了 5 分钟以上才跑，说明刚睡醒
+    if (slept) lastUpdCheck = 0;
+    maybeCheckUpdate();
+  }, 60e3);
+}
 
 /* ───────────── 托盘图标 ───────────── */
 const autostart = () => TAURI && TAURI.autostart;
