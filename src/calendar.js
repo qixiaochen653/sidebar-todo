@@ -66,6 +66,8 @@ function dayHead(d) {
 }
 const quickInput = iso => quickDay === iso ? `<input class="qadd" data-qinput="${iso}" placeholder="写完按回车" autocomplete="off">` : '';
 
+let gridOnly = false;
+function renderGridOnly() { gridOnly = true; try { render(); } finally { gridOnly = false; } }
 function render() {
   const c = C(), tIso = todayIso();
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === c.view));
@@ -106,7 +108,7 @@ function render() {
   }
   $('grid').innerHTML = h;
   renderDrawer(plan, late);
-  renderPop();
+  if (!gridOnly) renderPop();
   const q = document.querySelector('[data-qinput]'); if (q) q.focus();
 }
 
@@ -148,9 +150,23 @@ function openPop(id, r) {
 }
 function closePop() {
   const t = S.tasks.find(x => x.id === popTask);
+  if (t) fixSpan(t, 'due');
   if (t && !t.title.trim()) t.title = '（未命名）';
   popTask = null; save(); render();
 }
+
+// 离开开始 / 截止框时再整理日期（打字过程中的半截日期不算数）
+document.addEventListener('focusout', e => {
+  const d = e.target.dataset || {}, t = S.tasks.find(x => x.id === popTask);
+  if (!t || !e.target.closest || !e.target.closest('#pop') || !['start', 'due', 'startTime', 'dueTime', 'remind'].includes(d.p)) return;
+  const before = J(t); fixSpan(t, d.p.startsWith('start') ? 'start' : 'due');
+  if (J(t) !== before) {
+    save();
+    const pop = $('pop'), set = (k, v) => { const i = pop.querySelector(`[data-p="${k}"]`); if (i && i.value !== (v || '')) i.value = v || ''; };
+    set('start', t.start); set('startTime', t.startTime); set('due', t.due); set('dueTime', t.dueTime);
+    renderGridOnly();
+  }
+});
 
 /* ───── 撤销提示 ───── */
 let undoFn = null, toastTimer = null;
@@ -211,13 +227,20 @@ document.addEventListener('change', e => {
   if (d.f) { C()[d.f] = e.target.checked; save(); return render(); }
   const t = S.tasks.find(x => x.id === popTask); if (!t) return;
   const v = e.target.value || null;
-  if (d.p === 'due') { t.due = v; if (v && t.start && t.start > v) t.start = v; t.notified = null; if (v) anchor = parse(v); }
-  else if (d.p === 'start') { t.start = v; if (v && (!t.due || t.due < v)) t.due = v; t.notified = null; }
-  else if (d.p === 'dueTime') { t.dueTime = v; if (v && !t.due) t.due = todayIso(); }
-  else if (d.p === 'startTime') { t.startTime = v; if (v && !t.start) t.start = t.due || todayIso(); }
-  else if (d.p === 'remind') { t.remind = e.target.value || null; if (t.remind && !t.due) t.due = todayIso(); t.notified = null; }
+  if (d.p === 'due') { t.due = v; t.notified = null; }
+  else if (d.p === 'start') { t.start = v; t.notified = null; }
+  else if (d.p === 'dueTime') t.dueTime = v;
+  else if (d.p === 'startTime') t.startTime = v;
+  else if (d.p === 'remind') { t.remind = v; t.notified = null; }
   else return;
-  save(); render();
+  save();
+  // 弹窗里的日期 / 时间框：不重画弹窗（不然光标会丢），只同步其他几个框；日历格子照常更新
+  const pop = $('pop');
+  if (e.target.closest('#pop')) {
+    const set = (k, v) => { const i = pop.querySelector(`[data-p="${k}"]`); if (i && i !== e.target && i.value !== (v || '')) i.value = v || ''; };
+    set('start', t.start); set('startTime', t.startTime); set('due', t.due); set('dueTime', t.dueTime); set('remind', t.remind);
+    renderGridOnly();
+  } else render();
 });
 document.addEventListener('input', e => {
   if (e.target.dataset.p === 'title') { const t = S.tasks.find(x => x.id === popTask); if (t) { t.title = e.target.value; save(); } }

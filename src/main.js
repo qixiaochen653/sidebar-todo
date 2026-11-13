@@ -469,6 +469,7 @@ const curTask = () => S.tasks.find(x => x.id === editing);
 function focusEditor(sel = '[data-ed-title]') { const el = document.querySelector(sel); if (el) { el.focus(); const n = el.value.length; el.setSelectionRange(n, n); } }
 function closeEditor() {
   const t = curTask();
+  if (t) fixSpan(t, 'due');
   if (t && !t.title.trim()) t.title = '（未命名）';
   editing = null; save(); render();
 }
@@ -589,11 +590,11 @@ document.addEventListener('change', e => {
   const ed = e.target.dataset;
   if (t && ('edDue' in ed || 'edStart' in ed || 'edDueTime' in ed || 'edStartTime' in ed)) {
     const v = e.target.value || null;
-    if ('edDue' in ed) { t.due = v; if (v && t.start && t.start > v) t.start = v; }
-    if ('edStart' in ed) { t.start = v; if (v && (!t.due || t.due < v)) t.due = v; }
-    if ('edDueTime' in ed) { t.dueTime = v; if (v && !t.due) t.due = isoIn(0); }
-    if ('edStartTime' in ed) { t.startTime = v; if (v && !t.start) t.start = t.due || isoIn(0); }
-    t.notified = null; save(); render();
+    if ('edDue' in ed) t.due = v;
+    if ('edStart' in ed) t.start = v;
+    if ('edDueTime' in ed) t.dueTime = v;
+    if ('edStartTime' in ed) t.startTime = v;
+    t.notified = null; save(); renderAfterEdit(e.target);
   }
   const nd = e.target.dataset;
   if ('nGroup' in nd) { const n = curNote(); if (n) { n.group = nd && e.target.value ? +e.target.value : null; save(); } }
@@ -602,8 +603,27 @@ document.addEventListener('change', e => {
     S.notes.forEach(n => { if (noteSel.has(n.id)) n.group = g; }); noteSel.clear(); save(); render();
   }
   if ('nGname' in nd) { const g = S.groups.find(x => x.id === noteGroup); if (g && !g.name.trim()) { g.name = '未命名分组'; save(); render(); } }
-  if ('edRemind' in e.target.dataset && t) { t.remind = e.target.value || null; if (t.remind && !t.due) t.due = isoIn(0); t.notified = null; save(); render(); }
+  if ('edRemind' in e.target.dataset && t) { t.remind = e.target.value || null; t.notified = null; save(); renderAfterEdit(e.target); }
 });
+
+// 日期 / 时间框：一填出合法的值浏览器就会触发 change，这时如果重画编辑框，光标会丢、后面输入的数字就没了。
+// 所以编辑框开着时不重画，只把其他几个框的值同步一下（比如开始日期晚于截止日期时自动调整的那个）；
+// 关掉编辑框时会整体重画一次。
+// 离开开始 / 截止框时再整理日期（见 shared.js 的 fixSpan）
+document.addEventListener('focusout', e => {
+  const d = e.target.dataset || {}, t = curTask();
+  if (!t || !e.target.closest || !e.target.closest('[data-editor]')) return;
+  if (!('edStart' in d || 'edDue' in d || 'edStartTime' in d || 'edDueTime' in d || 'edRemind' in d)) return;
+  const before = J(t); fixSpan(t, 'edStart' in d || 'edStartTime' in d ? 'start' : 'due');
+  if (J(t) !== before) { save(); renderAfterEdit(e.target); }
+});
+function renderAfterEdit(el) {
+  const box = el.closest('[data-editor]'), t = curTask();
+  if (!box || !t) return render();
+  const set = (sel, v) => { const i = box.querySelector(sel); if (i && i !== el && i.value !== (v || '')) i.value = v || ''; };
+  set('[data-ed-start]', t.start); set('[data-ed-start-time]', t.startTime);
+  set('[data-ed-due]', t.due); set('[data-ed-due-time]', t.dueTime); set('[data-ed-remind]', t.remind);
+}
 
 document.addEventListener('keydown', e => {
   const d = e.target.dataset || {};

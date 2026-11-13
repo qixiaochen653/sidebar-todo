@@ -242,6 +242,13 @@ function spanOf(t) {
   const to = t.due || t.start, from = t.start && t.start <= to ? t.start : to;
   return { from, to };
 }
+// 填完一个日期框（离开它）以后再整理：开始晚于截止时，以刚改的那个为准把另一个对齐。
+// 打字过程中不整理，因为半截的日期（比如年份才打到 0002）也会被浏览器当成合法值。
+function fixSpan(t, changed) {
+  if (t.start && t.due && t.start > t.due) { if (changed === 'start') t.due = t.start; else t.start = t.due; }
+  if (t.startTime && !t.start) t.start = t.due || isoIn(0);
+  if ((t.dueTime || t.remind) && !t.due) t.due = t.start || isoIn(0);
+}
 // 这一天是不是在待办的时间范围里
 const coversDay = (t, iso) => { const sp = spanOf(t); return !!sp && sp.from <= iso && iso <= sp.to; };
 // 「今天要处理的」：今天在范围内，或者已经逾期还没做完，或者根本没定日期（边栏「今天」列表用）
