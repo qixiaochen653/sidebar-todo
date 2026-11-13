@@ -58,7 +58,10 @@ let store = null;
 let myRev = '';                        // 自己最后一次写入的版本号，收到自己的回声时忽略
 let base = structuredClone(S);
 let onExternalCb = null;
-const J = v => JSON.stringify(v);
+// 比较用的 JSON：字段按字母排序。数据文件由 Rust 写入时字段顺序会变成字母序，
+// 不排序的话同样的内容也会被当成「被别的窗口改过」。
+const sortKeys = v => Array.isArray(v) ? v.map(sortKeys) : v && typeof v === 'object' ? Object.keys(v).sort().reduce((o, k) => (v[k] === undefined ? o : (o[k] = sortKeys(v[k]), o)), {}) : v;
+const J = v => JSON.stringify(sortKeys(v));
 const SKIP = new Set(['rev']);
 function mergeObj(b, m, t) {
   if (J(m) === J(b)) return structuredClone(t);
