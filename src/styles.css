@@ -313,3 +313,9 @@ body:not(.in-tauri) .tauri-only{display:none}
 .left.has-upd .strip .tab:first-child::after{left:auto;right:7px}
 .ed-rep{flex-wrap:wrap;row-gap:2px}
 .ed-rep button{white-space:nowrap;padding:3px 6px;font-size:11.5px}
+/* 一句话记待办：识别预览 */
+.qa-prev{display:none;align-items:baseline;gap:6px;flex-wrap:wrap;margin:-6px 2px 12px;padding:6px 10px;border-radius:9px;background:var(--accent-soft);font-size:12px;line-height:1.5;color:var(--ink2)}
+.qa-prev.show{display:flex}
+.qa-prev .qa-k{color:var(--ink3)}
+.qa-prev b{color:var(--ink);font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qa-prev .qa-v{color:var(--accent);font-weight:600}

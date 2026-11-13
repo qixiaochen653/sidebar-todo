@@ -242,7 +242,7 @@ function render() {
     const isToday = isTodayTask;
     const later = open.filter(t => !isToday(t)).length;
     const list = scopeAll ? open : open.filter(isToday);
-    body = `<div class="add"><label class="sr" for="nt">新待办</label><input id="nt" placeholder="想到什么，先记下来…" autocomplete="off"><button data-add aria-label="添加待办">${ICON.plus}</button></div>
+    body = `<div class="add"><label class="sr" for="nt">新待办</label><input id="nt" placeholder="想到什么，先记下来…（可以写「明天下午3点」）" autocomplete="off"><button data-add aria-label="添加待办">${ICON.plus}</button></div><div class="qa-prev" id="qaPrev" aria-live="polite"></div>
       <div class="label scope"><span class="seg2"><button data-scope="today" class="${scopeAll ? '' : 'on'}">今天 ${open.length - later}</button><button data-scope="all" class="${scopeAll ? 'on' : ''}">全部 ${open.length}</button></span><span class="hint">点标题可以编辑</span></div>
       ${list.length ? list.map(item).join('') : `<div class="empty">${!S.tasks.length ? '还没有待办，在上面输入框里记下第一件事吧。' : scopeAll ? '没有待办，轻松一下。' : '今天的事都做完了。'}</div>`}
       ${!scopeAll && later ? `<button class="more" data-scope="all">以后还有 ${later} 件 →</button>` : ''}
@@ -269,7 +269,10 @@ function render() {
   popId = null;
 
   const nt = $('nt');
-  if (nt) nt.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) addTask(); });
+  if (nt) {
+    nt.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) addTask(); });
+    nt.addEventListener('input', () => showQuickPreview(nt.value));
+  }
   if (editing !== null) {
     const ed = document.querySelector('[data-editor]');
     if (ed) ed.scrollIntoView({ block: 'nearest' });
@@ -458,9 +461,25 @@ function renderCourse() {
   }
 }
 
+// 一句话记待办：边打字边在输入框下面显示识别结果（见 quickadd.js）
+function showQuickPreview(v) {
+  const el = $('qaPrev'); if (!el) return;
+  const p = v.trim() ? parseQuick(v) : null, d = p && describeQuick(p);
+  el.innerHTML = d ? `<span class="qa-k">识别为</span><b>${esc(p.title)}</b><span class="qa-v">${esc(d)}</span>` : '';
+  el.classList.toggle('show', !!d);
+}
+// 从一句话生成待办；没写日期的默认就是今天
+function taskFromText(v, fallbackDue) {
+  const p = parseQuick(v), t = { id: uid(), title: p.title, due: p.due || fallbackDue || isoIn(0), created: isoIn(0), imp: !!p.imp, urg: !!p.urg, done: false, subs: [] };
+  for (const k of ['start', 'startTime', 'dueTime', 'remind', 'repeat', 'repeatDays']) if (p[k]) t[k] = p[k];
+  fixSpan(t, 'due');
+  return t;
+}
 function addTask() {
   const nt = $('nt'); const v = nt.value.trim(); if (!v) return;
-  S.tasks.push({ id: uid(), title: v, due: isoIn(0), created: isoIn(0), imp: false, urg: false, done: false, subs: [] });   // 随手记的默认就是今天
+  const t = taskFromText(v);
+  S.tasks.push(t);
+  if (t.due !== isoIn(0) && !isTodayTask(t)) toastInfo(`已记下，排在 ${+t.due.slice(5, 7)}月${+t.due.slice(8)}日（在「全部」里能看到）`);
   save(); render(); $('nt').focus();
 }
 
@@ -801,7 +820,9 @@ function renderUpdate(msg) {
   $('app').classList.toggle('has-upd', !!update && !updating);
   if (!update) { el.hidden = true; return; }
   el.hidden = false;
-  const notes = (update.body || '').trim().split('\n').filter(l => l.trim() && !/\.exe|安装包/.test(l)).slice(0, 3).map(esc).join('<br>');
+  // 更新说明来自 README 里这一版的那一节：每条只取第一句，最多 3 条
+  const notes = (update.body || '').trim().split('\n').filter(l => l.trim() && !/\.exe|安装包/.test(l))
+    .map(l => l.replace(/^\s*[-*•]\s*/, '').split(/(?<=[。！？])/)[0].trim()).filter(Boolean).slice(0, 3).map(l => '· ' + esc(l)).join('<br>');
   el.innerHTML = msg ? `<span>${msg}</span>` : `<div><b>有新版本 ${esc(update.version)}</b>${notes ? `<small>${notes}</small>` : ''}</div>
     <span class="upd-acts"><button class="n-link" data-upd-later>以后</button><button class="ed-ok sm" data-upd-go>更新</button></span>`;
 }

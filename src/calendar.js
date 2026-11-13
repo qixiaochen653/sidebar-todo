@@ -64,7 +64,7 @@ function dayHead(d) {
   const iso = isoOf(d), L = C().lunar && window.Lunar ? Lunar.label(d.getFullYear(), d.getMonth() + 1, d.getDate()) : null;
   return `<div class="dhead"><span class="dnum">${d.getDate()}</span>${L ? `<span class="lun ${L.fest ? 'fest' : L.term ? 'term' : ''}">${esc(L.text)}</span>` : ''}<button class="dadd" data-qadd="${iso}" aria-label="在 ${d.getMonth() + 1}月${d.getDate()}日 添加待办">${I.plus}</button></div>`;
 }
-const quickInput = iso => quickDay === iso ? `<input class="qadd" data-qinput="${iso}" placeholder="写完按回车" autocomplete="off">` : '';
+const quickInput = iso => quickDay === iso ? `<input class="qadd" data-qinput="${iso}" placeholder="写完按回车，可写「下午3点」" autocomplete="off">` : '';
 
 let gridOnly = false;
 function renderGridOnly() { gridOnly = true; try { render(); } finally { gridOnly = false; } }
@@ -250,7 +250,12 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing) {
     if (d.qinput) {
       const v = e.target.value.trim();
-      if (v) { S.tasks.push({ id: uid(), title: v, due: d.qinput, created: todayIso(), imp: false, urg: false, done: false, subs: [] }); save(); }
+      if (v) {
+        // 也认一句话：「下午3点 开会」「每周三 例会」；没写日期就用这一格的日期
+        const p = parseQuick(v), t = { id: uid(), title: p.title, due: p.due || d.qinput, created: todayIso(), imp: !!p.imp, urg: !!p.urg, done: false, subs: [] };
+        for (const k of ['start', 'startTime', 'dueTime', 'remind', 'repeat', 'repeatDays']) if (p[k]) t[k] = p[k];
+        fixSpan(t, 'due'); S.tasks.push(t); save();
+      }
       quickDay = v ? d.qinput : null; render();   // 连续添加：回车后输入框还在
       return;
     }

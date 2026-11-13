@@ -1,5 +1,5 @@
 # 发布新版本：在 GitHub 的 Actions 页面选「发布新版本」→ Run workflow。
-# GitHub 会在云端的 Windows 上打包，签名后发到 Releases；已安装的软件会自动收到更新。
+# 先自动跑测试，测试通过后才在云端的 Windows 上打包、签名、发到 Releases；已安装的软件会自动收到更新。
 name: 发布新版本
 
 on:
@@ -11,7 +11,22 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - name: 一句话记待办的识别测试
+        run: node tests/quickadd.test.cjs
+      - name: 界面测试（边栏 + 日历）
+        run: node tests/ui.test.cjs
+
   release:
+    needs: test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -28,6 +43,16 @@ jobs:
 
       - run: npm install
 
+      - name: 从 README 取这一版的更新说明
+        id: notes
+        shell: bash
+        run: |
+          {
+            echo 'body<<NOTES_EOF'
+            node scripts/release-notes.cjs
+            echo 'NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -36,7 +61,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: '边栏待办 v__VERSION__'
-          releaseBody: '下载下面的 .exe 安装包，双击安装。已经装过的会自动提示更新。'
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           # 安装包用英文文件名：GitHub 会把中文文件名删掉，导致更新文件 latest.json 生成失败
